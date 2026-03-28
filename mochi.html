@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>사이버렉카 전용 컨트롤 센터</title>
+    <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-main: #050a18;
+            --bg-side: #0a1227;
+            --bg-card: rgba(30, 41, 59, 0.6);
+            --primary: #facc15;
+            --accent: #ffc947;
+            --danger: #ff5252;
+            --success: #10b981;
+            --text: #e2e8f0;
+            --border: rgba(255, 255, 255, 0.1);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Pretendard', sans-serif; }
+        body { background-color: var(--bg-main); color: var(--text); display: flex; height: 100vh; overflow: hidden; }
+
+        aside { width: 260px; background: var(--bg-side); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 30px 20px; }
+        .logo { font-size: 22px; font-weight: 800; color: var(--primary); text-align: center; margin-bottom: 40px; letter-spacing: 1px; }
+        .nav-item { list-style: none; padding: 15px; margin-bottom: 8px; border-radius: 12px; cursor: pointer; transition: 0.3s; color: #94a3b8; font-weight: 600; }
+        .nav-item.active { background: var(--primary); color: #000; box-shadow: 0 4px 15px rgba(250, 204, 21, 0.3); }
+        .nav-item:hover:not(.active) { background: rgba(255, 255, 255, 0.05); color: #fff; }
+
+        main { flex: 1; padding: 40px; overflow-y: auto; position: relative; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
+        .clock { font-family: monospace; color: var(--primary); font-size: 1.2rem; }
+
+        .page { display: none; animation: fadeIn 0.3s ease; }
+        .page.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(400px, 1fr)); gap: 20px; }
+        .card { background: var(--bg-card); backdrop-filter: blur(10px); border: 1px solid var(--border); border-radius: 20px; padding: 25px; margin-bottom: 20px;}
+        .card h3 { font-size: 16px; color: var(--primary); margin-bottom: 20px; border-left: 4px solid var(--primary); padding-left: 10px; }
+
+        .notice-list { list-style: none; line-height: 2; color: #cbd5e1; }
+        .notice-list li { margin-bottom: 15px; padding-left: 25px; position: relative; }
+        .notice-list li::before { content: "•"; position: absolute; left: 0; color: var(--primary); font-weight: bold; }
+
+        .btn-list { display: grid; gap: 10px; }
+        button { padding: 12px; border: none; border-radius: 10px; cursor: pointer; font-weight: 700; transition: 0.2s; background: rgba(255,255,255,0.08); color: white; outline: none; }
+        button:hover { background: var(--primary); color: #000; transform: translateY(-2px); }
+        
+        input { width: 100%; padding: 12px; margin-bottom: 10px; border-radius: 10px; background: #000; border: 1px solid var(--border); color: white; outline: none; }
+        
+        .item-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px; gap: 10px; }
+        .item-label { font-size: 14px; font-weight: 600; flex: 1; }
+        .item-input { width: 80px; margin-bottom: 0; text-align: center; border-color: var(--border); }
+
+        .calc-res { background: rgba(0,0,0,0.4); padding: 20px; border-radius: 15px; margin-top: 15px; border: 1px solid var(--border); }
+        .calc-res div { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 14px; }
+        .total-highlight { color: var(--accent); font-weight: 800; border-top: 1px dashed var(--border); padding-top: 10px; margin-top: 10px; }
+        .profit-highlight { color: var(--success); font-weight: 800; font-size: 1.1rem !important; margin-top: 5px; }
+
+        .calc-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; }
+    </style>
+</head>
+<body>
+
+<aside>
+    <div class="logo">🚨 사이버렉카 전용</div>
+    <div class="nav-item active" onclick="switchTab('notice', this)">⚠️ 필독하세요</div>
+    <div class="nav-item" onclick="switchTab('main', this)">📋 렉카 메인 시스템</div>
+</aside>
+
+<main>
+    <div class="header">
+        <h2 id="title">필독하세요</h2>
+        <div class="clock" id="clock">00:00:00</div>
+    </div>
+
+    <div id="page-notice" class="page active">
+        <div class="card">
+            <h3>📢 팩션 사이드공지 & 물품계산기 사용법</h3>
+            <ul class="notice-list">
+                <li>렉카 메인 시스템 메뉴로 들어간다.</li>
+                <li>오른쪽에 고유번호 및 닉네임을 기재 후 각 상황에 맞는 압류 버튼을 클릭한다.</li>
+                <li>인게임으로 들어와 채팅창을 열고 붙여넣기 해주시면 됩니다.</li>
+                <li>물품 계산기 나와있는대로 갯수 적고 해주시면 되고 공동계좌 입금해야 하는 금액 40프로 계산한 금액 설정 해뒀으니 그 금액 공동계좌에 넣어주시면 됩니다.</li>
+            </ul>
+        </div>
+    </div>
+
+    <div id="page-main" class="page">
+        <div class="grid">
+            <div class="card">
+                <h3>👤 차량 압류 정보</h3>
+                <input type="text" id="uid" placeholder="고유번호 입력">
+                <input type="text" id="nick" placeholder="닉네임 입력">
+                <div class="btn-list">
+                    <button onclick="copyWrecker('exec')" style="color:var(--accent)">집행차량 압류</button>
+                    <button onclick="copyWrecker('normal')" style="color:#60a5fa">일반 상황 압류</button>
+                    <button onclick="copyWrecker('long')" style="color:var(--danger)">장기 미접속 차량 압류</button>
+                    <button onclick="copyWrecker('garage')">메인 차고지 앞 압류</button>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>⚖️ 팩션물품 계산기</h3>
+                <div class="item-row"><span class="item-label">🛠 방탄 타이어 (MAX 40)</span><input type="number" id="tire" class="item-input" value="0" min="0" max="40" oninput="calculate()"></div>
+                <div class="item-row"><span class="item-label">📦 차량포장키트 (MAX 10)</span><input type="number" id="kit" class="item-input" value="0" min="0" max="10" oninput="calculate()"></div>
+                <div class="item-row"><span class="item-label">📜 차량거래 계약서 (MAX 10)</span><input type="number" id="contract" class="item-input" value="0" min="0" max="10" oninput="calculate()"></div>
+                <div class="calc-res">
+                    <div><span>유저한테 받아야 하는 비용:</span> <span id="user-total" style="color:#60a5fa">0원</span></div>
+                    <div><span>렉카 물품 비콘가격 총액:</span> <span id="buy-total">0원</span></div>
+                    <div class="total-highlight"><span>공동계좌 입금 해야 하는 금액 (40%):</span> <span id="final-total">0원</span></div>
+                    <div class="profit-highlight"><span>판매 순수익 총액 (60%):</span> <span id="net-profit">0원</span></div>
+                </div>
+                <div class="calc-btns">
+                    <button onclick="copyCalc()" style="background: var(--primary); color:#000;">정산 내역 복사</button>
+                    <button onclick="resetCalculator()" style="background: rgba(255,255,255,0.1); color:#fff;">초기화</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<script>
+    function switchTab(target, el) {
+        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+        document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+        document.getElementById(`page-${target}`).classList.add('active');
+        el.classList.add('active');
+        document.getElementById('title').innerText = el.innerText.replace('⚠️ ', '').replace('📋 ', '');
+    }
+
+    const ITEMS = {
+        tire: { name: "방탄 타이어", sell: 10000000, buy: 2000000, max: 40 },
+        kit: { name: "차량포장키트", sell: 200000000, buy: 40000000, max: 10 },
+        contract: { name: "차량거래 계약서", sell: 200000000, buy: 40000000, max: 10 }
+    };
+
+    function calculate() {
+        let userSum = 0;
+        for (let key in ITEMS) {
+            let input = document.getElementById(key);
+            let val = parseInt(input.value) || 0;
+            if (val > ITEMS[key].max) { input.value = ITEMS[key].max; val = ITEMS[key].max; }
+            userSum += val * ITEMS[key].sell;
+        }
+        document.getElementById('user-total').innerText = userSum.toLocaleString() + "원";
+        document.getElementById('buy-total').innerText = (userSum * 0.2).toLocaleString() + "원"; // 비콘가 20% 기준 예시
+        document.getElementById('final-total').innerText = (userSum * 0.4).toLocaleString() + "원";
+        document.getElementById('net-profit').innerText = (userSum * 0.6).toLocaleString() + "원";
+    }
+
+    function resetCalculator() {
+        document.getElementById('tire').value = 0; document.getElementById('kit').value = 0; document.getElementById('contract').value = 0;
+        calculate();
+    }
+
+    function copyCalc() {
+        const tire = document.getElementById('tire').value;
+        const kit = document.getElementById('kit').value;
+        const contract = document.getElementById('contract').value;
+        if (tire == 0 && kit == 0 && contract == 0) { alert("수량을 입력해주세요!"); return; }
+        const msg = `[ 사이버렉카 정산 내역 ]\n------------------\n🛠 방탄 타이어: ${tire}개\n📦 차량포장키트: ${kit}개\n📜 차량거래 계약서: ${contract}개\n------------------\n💰 유저 청구 비용: ${document.getElementById('user-total').innerText}\n🏦 공동계좌 입금액: ${document.getElementById('final-total').innerText}\n💸 판매 순수익 총액: ${document.getElementById('net-profit').innerText}\n-『 사이버렉카 』-`;
+        copyRaw(msg, "정산 내역");
+    }
+
+    function copyWrecker(type) {
+        const u = document.getElementById('uid').value || "미입력";
+        const n = document.getElementById('nick').value || "미입력";
+        const header = "/사이버렉카 사이버렉카에서 알려드립니다.\n";
+        const info = `고번 : ${u}  닉네임 : ${n}\n`;
+        let content = "";
+        switch(type) {
+            case 'exec': content="범죄에 사용된 차량으로 즉시 압류를 진행합니다."; break;
+            case 'normal': content="도로에 버려진 차량으로 1분뒤 압류를 진행합니다."; break;
+            case 'long': content="장기간 미접속 차량으로 즉시 압류를 진행합니다."; break;
+            case 'garage': content="메인차고지 앞 차량으로 1분뒤 압류를 진행합니다."; break;
+        }
+        copyRaw(header + info + content, "압류 공지");
+    }
+
+    function copyRaw(t, label) {
+        const tempInput = document.createElement("textarea");
+        tempInput.value = t; document.body.appendChild(tempInput);
+        tempInput.select(); document.execCommand('copy');
+        document.body.removeChild(tempInput); alert(`[${label}] 복사되었습니다! 🚛`);
+    }
+
+    setInterval(() => { document.getElementById('clock').innerText = new Date().toLocaleTimeString('ko-KR', {hour12: false}); }, 1000);
+</script>
+</body>
+</html>
