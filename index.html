@@ -43,6 +43,7 @@
         .logo { font-size: 22px; font-weight: 800; color: var(--primary); text-align: center; margin-bottom: 40px; letter-spacing: 1px; }
         .nav-item { padding: 15px; margin-bottom: 8px; border-radius: 12px; cursor: pointer; color: #94a3b8; font-weight: 600; transition: 0.3s; }
         .nav-item.active { background: var(--primary); color: #000; box-shadow: 0 4px 15px rgba(250, 204, 21, 0.3); }
+        .admin-only { display: none; border: 1px dashed var(--danger); margin-top: 10px; }
 
         main { flex: 1; padding: 40px; overflow-y: auto; }
         .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
@@ -52,11 +53,11 @@
         .page.active { display: block; animation: fadeIn 0.3s ease; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 
-        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(400px, 1fr)); gap: 20px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap: 20px; }
         .card { background: var(--bg-card); backdrop-filter: blur(10px); border: 1px solid var(--border); border-radius: 20px; padding: 25px; margin-bottom: 20px; }
         .card h3 { font-size: 16px; color: var(--primary); margin-bottom: 20px; border-left: 4px solid var(--primary); padding-left: 10px; }
 
-        input.form-input { width: 100%; padding: 12px; margin-bottom: 10px; border-radius: 10px; background: #000; border: 1px solid var(--border); color: white; outline: none; }
+        input.form-input, textarea.form-input { width: 100%; padding: 12px; margin-bottom: 10px; border-radius: 10px; background: #000; border: 1px solid var(--border); color: white; outline: none; }
         .action-btn { padding: 12px; border: none; border-radius: 10px; cursor: pointer; font-weight: 700; transition: 0.2s; background: rgba(255,255,255,0.08); color: white; margin-bottom: 5px; width: 100%; }
         .action-btn:hover { background: var(--primary); color: #000; transform: translateY(-2px); }
 
@@ -66,7 +67,15 @@
         .calc-res { background: rgba(0,0,0,0.4); padding: 20px; border-radius: 15px; margin-top: 15px; border: 1px solid var(--border); }
         .calc-res div { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 14px; }
         .total-highlight { color: var(--accent); font-weight: 800; border-top: 1px dashed var(--border); padding-top: 10px; margin-top: 10px; }
-        .profit-highlight { color: var(--success); font-weight: 800; font-size: 1.1rem !important; }
+        
+        #black-view { margin-top: 15px; padding: 15px; border-radius: 12px; text-align: center; background: rgba(255,255,255,0.03); }
+        .status-badge { padding: 6px 12px; border-radius: 6px; font-weight: 800; display: inline-block; margin-bottom: 10px; }
+        .is-warn { background: var(--danger); color: white; }
+        .is-not-listed { background: #475569; color: white; } /* 등재되지 않음 색상 */
+
+        .period-group { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 15px; }
+        .period-btn { padding: 10px; border-radius: 8px; border: 1px solid var(--border); background: #000; color: #fff; cursor: pointer; font-size: 13px; transition: 0.2s; }
+        .period-btn.selected { background: var(--primary); color: #000; font-weight: 800; border-color: var(--primary); }
 
         .notice-list { list-style: none; line-height: 2; color: #cbd5e1; }
         .notice-list li { margin-bottom: 15px; padding-left: 25px; position: relative; }
@@ -88,6 +97,7 @@
         <div class="logo">🚨 사이버렉카 전용</div>
         <div class="nav-item active" id="nav-notice" onclick="switchTab('notice')">⚠️ 필독하세요</div>
         <div class="nav-item" id="nav-main" onclick="switchTab('main')">📋 렉카 메인 시스템</div>
+        <div class="nav-item admin-only" id="nav-admin" onclick="switchTab('admin')">🚫 블랙리스트 등재</div>
     </aside>
 
     <main>
@@ -100,10 +110,9 @@
             <div class="card">
                 <h3>📢 팩션 사이드공지 & 물품계산기 사용법</h3>
                 <ul class="notice-list">
-                    <li>렉카 메인 시스템 메뉴로 들어간다.</li>
-                    <li>오른쪽에 고유번호 및 닉네임을 기재 후 각 상황에 맞는 압류 버튼을 클릭한다.</li>
-                    <li>인게임으로 들어와 채팅창을 열고 붙여넣기 해주시면 됩니다.</li>
-                    <li>물품 계산기 나와있는대로 갯수 적고 해주시면 되고 공동계좌 입금해야 하는 금액 40프로 계산한 금액 설정 해뒀으니 그 금액 공동계좌에 넣어주시면 됩니다.</li>
+                    <li><b>실시간 블랙리스트</b>: 등재 시 선택한 기간이 지나면 자동 해제 및 서버 삭제 처리됩니다.</li>
+                    <li><b>압류 공지</b>: 고유번호 및 닉네임 기재 후 상황별 버튼을 눌러 복사하세요.</li>
+                    <li><b>정산</b>: 순수익 60%와 공동계좌 40%가 자동으로 계산됩니다.</li>
                 </ul>
             </div>
         </div>
@@ -131,7 +140,7 @@
                     <div class="calc-res">
                         <div><span>유저 판매가 총액:</span> <span id="res-user">0원</span></div>
                         <div class="total-highlight"><span>공동계좌 입금액 (40%):</span> <span id="res-final">0원</span></div>
-                        <div class="profit-highlight" style="margin-top:10px;"><span>판매 순수익 (60%):</span> <span id="res-net">0원</span></div>
+                        <div style="color:var(--success); font-weight:800; margin-top:10px;"><span>판매 순수익 (60%):</span> <span id="res-net">0원</span></div>
                     </div>
                     
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px;">
@@ -139,51 +148,150 @@
                         <button class="action-btn" onclick="resetCalc()" style="margin:0;">초기화</button>
                     </div>
                 </div>
+
+                <div class="card">
+                    <h3>🔍 블랙리스트 실시간 조회</h3>
+                    <input type="text" id="search-uid" class="form-input" placeholder="조회할 고유번호 입력" oninput="searchBlack()">
+                    <div id="black-view">고유번호를 입력하면 실시간으로 조회합니다.</div>
+                </div>
+            </div>
+        </div>
+
+        <div id="page-admin" class="page">
+            <div class="card">
+                <h3>🚫 블랙리스트 등재 (관리자 전용)</h3>
+                <input type="text" id="reg-uid" class="form-input" placeholder="대상 고유번호">
+                <input type="text" id="reg-nick" class="form-input" placeholder="대상 닉네임">
+                <textarea id="reg-reason" class="form-input" placeholder="블랙리스트 사유" style="height:100px;"></textarea>
+                
+                <p style="font-size: 12px; color: var(--primary); margin-bottom: 8px;">⏳ 제한 기간 선택 (실시간 기준)</p>
+                <div class="period-group">
+                    <button class="period-btn" onclick="selectPeriod(7, this)">7일</button>
+                    <button class="period-btn" onclick="selectPeriod(14, this)">14일</button>
+                    <button class="period-btn" onclick="selectPeriod(21, this)">21일</button>
+                    <button class="period-btn" onclick="selectPeriod(30, this)">30일</button>
+                </div>
+                
+                <button class="action-btn" id="final-push-btn" onclick="pushBlack()" style="background:var(--danger); color:white; height:50px; font-size:1.1rem; opacity: 0.5; pointer-events: none;">기간을 선택해주세요</button>
             </div>
         </div>
     </main>
 </div>
 
 <script>
-    const PW = "1234"; // 🔑 비밀번호
+    const PW = "0221"; 
+    const ADMIN_PW = "cyber00!@#$"; 
+    const DB_URL = "https://cyber-mochi-default-rtdb.firebaseio.com/blacklist.json"; 
 
-    // 인증 시스템
+    let remoteData = {};
+    let selectedDays = 0;
+
     function checkAuth() {
-        if (document.getElementById('passcode').value === PW) {
-            sessionStorage.setItem('wrecker_ok', 'true');
-            showMain();
-            alert('인증에 성공하였습니다 !');
-        } else {
-            alert('잘못된 코드입니다.');
-            document.getElementById('passcode').value = "";
-        }
+        const val = document.getElementById('passcode').value;
+        if (val === ADMIN_PW) { sessionStorage.setItem('wrecker_ok', 'admin'); showMain(true); alert('관리자 접속 성공'); }
+        else if (val === PW) { sessionStorage.setItem('wrecker_ok', 'user'); showMain(false); alert('인증 성공'); }
+        else { alert('잘못된 코드입니다.'); }
     }
 
-    function showMain() {
+    function showMain(isAdmin) {
         document.getElementById('auth-overlay').style.display = 'none';
         document.getElementById('main-wrapper').style.display = 'flex';
+        if(isAdmin) document.getElementById('nav-admin').style.display = 'block';
+        loadData();
     }
 
     window.onload = function() {
-        if (sessionStorage.getItem('wrecker_ok') === 'true') { showMain(); }
+        const auth = sessionStorage.getItem('wrecker_ok');
+        if (auth === 'admin') showMain(true);
+        else if (auth === 'user') showMain(false);
     };
 
-    // 탭 전환
+    async function loadData() {
+        try {
+            const res = await fetch(DB_URL);
+            remoteData = await res.json() || {};
+        } catch(e) { console.error("DB 로드 실패"); }
+    }
+
+    async function searchBlack() {
+        const val = document.getElementById('search-uid').value;
+        const view = document.getElementById('black-view');
+        if(!val) { view.innerHTML = "조회 대기 중..."; return; }
+        
+        const f = remoteData[val];
+        if(f) {
+            const now = new Date();
+            const expireDate = new Date(f.expireTimestamp);
+
+            if(now > expireDate) {
+                view.innerHTML = `<span class="status-badge is-not-listed">✅ 기간 만료</span><br><p>해당 인원은 기간이 지나 자동 해제되었습니다.</p>`;
+                await deleteBlack(val);
+                return;
+            }
+            view.innerHTML = `<span class="status-badge is-warn">🚫 블랙리스트 대상</span><br>
+                              <p style="color:var(--danger); font-weight:bold;">사유: ${f.reason}</p>
+                              <p style="font-size:13px; margin-top:5px;">해제 일시: ${expireDate.toLocaleString()}</p>`;
+        } else {
+            view.innerHTML = `<span class="status-badge is-not-listed">🔍 결과 없음</span><br><p>블랙리스트에 등재되있지 않습니다.</p>`;
+        }
+    }
+
+    async function deleteBlack(uid) {
+        await fetch(DB_URL.replace('.json', `/${uid}.json`), { method: 'DELETE' });
+        delete remoteData[uid];
+    }
+
+    function selectPeriod(days, btn) {
+        selectedDays = days;
+        document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
+        
+        const pushBtn = document.getElementById('final-push-btn');
+        pushBtn.style.opacity = "1";
+        pushBtn.style.pointerEvents = "auto";
+        pushBtn.innerText = `서버 데이터베이스에 등재 (${days}일)`;
+    }
+
+    async function pushBlack() {
+        const uid = document.getElementById('reg-uid').value;
+        const nick = document.getElementById('reg-nick').value;
+        const reason = document.getElementById('reg-reason').value;
+        if(!uid || selectedDays === 0) return alert("정보를 모두 입력하세요.");
+        
+        const now = new Date();
+        const expireTime = new Date(now.getTime() + (selectedDays * 24 * 60 * 60 * 1000));
+
+        await fetch(DB_URL.replace('.json', `/${uid}.json`), {
+            method: 'PUT',
+            body: JSON.stringify({
+                uid: uid,
+                nick: nick,
+                reason: reason,
+                expireTimestamp: expireTime.toISOString()
+            })
+        });
+        alert(selectedDays + "일간 등재 완료!");
+        loadData();
+        document.getElementById('reg-uid').value = "";
+        document.getElementById('reg-nick').value = "";
+        document.getElementById('reg-reason').value = "";
+        document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('selected'));
+        selectedDays = 0;
+    }
+
     function switchTab(name) {
         document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
         document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
         document.getElementById('page-' + name).classList.add('active');
         document.getElementById('nav-' + name).classList.add('active');
-        document.getElementById('title').innerText = (name === 'notice') ? '필독하세요' : '렉카 메인 시스템';
+        document.getElementById('title').innerText = (name === 'notice') ? '필독하세요' : (name === 'main' ? '렉카 메인 시스템' : '블랙리스트 등재');
     }
 
-    // 계산기 로직
     const PRICES = { tire: 10000000, kit: 200000000, contract: 200000000 };
     function calculate() {
         const t = parseInt(document.getElementById('tire').value) || 0;
         const k = parseInt(document.getElementById('kit').value) || 0;
         const c = parseInt(document.getElementById('contract').value) || 0;
-        
         const total = (t * PRICES.tire) + (k * PRICES.kit) + (c * PRICES.contract);
         document.getElementById('res-user').innerText = total.toLocaleString() + "원";
         document.getElementById('res-final').innerText = (total * 0.4).toLocaleString() + "원";
@@ -191,20 +299,17 @@
     }
 
     function resetCalc() {
-        document.getElementById('tire').value = 0;
-        document.getElementById('kit').value = 0;
-        document.getElementById('contract').value = 0;
+        document.getElementById('tire').value = 0; document.getElementById('kit').value = 0; document.getElementById('contract').value = 0;
         calculate();
     }
 
-    // 복사 로직
-    function clip(txt, label) {
-        const t = document.createElement("textarea");
-        document.body.appendChild(t);
-        t.value = txt; t.select();
-        document.execCommand('copy');
-        document.body.removeChild(t);
-        alert(label + " 복사 완료! 🚛");
+    async function clip(txt, label) {
+        try { await navigator.clipboard.writeText(txt); alert(label + " 복사 완료!"); }
+        catch(e) {
+            const t = document.createElement("textarea"); document.body.appendChild(t);
+            t.value = txt; t.select(); document.execCommand('copy');
+            document.body.removeChild(t); alert(label + " 복사 완료!");
+        }
     }
 
     function copyW(type) {
@@ -219,14 +324,10 @@
     }
 
     function copyCalc() {
-        const t = document.getElementById('tire').value;
-        const k = document.getElementById('kit').value;
-        const c = document.getElementById('contract').value;
-        const m = `[ 사이버렉카 정산 내역 ]\n🛠 타이어: ${t}개\n📦 포장키트: ${k}개\n📜 계약서: ${c}개\n------------------\n💰 총 판매액: ${document.getElementById('res-user').innerText}\n🏦 공계입금(40%): ${document.getElementById('res-final').innerText}\n💸 순수익(60%): ${document.getElementById('res-net').innerText}\n-『 사이버렉카 』-`;
+        const m = `[ 사이버렉카 정산 내역 ]\n🛠 타이어: ${document.getElementById('tire').value}개\n📦 포장키트: ${document.getElementById('kit').value}개\n📜 계약서: ${document.getElementById('contract').value}개\n------------------\n💰 총 판매액: ${document.getElementById('res-user').innerText}\n🏦 공계입금(40%): ${document.getElementById('res-final').innerText}\n💸 순수익(60%): ${document.getElementById('res-net').innerText}\n-『 사이버렉카 』-`;
         clip(m, "정산 내역");
     }
 
-    // 시계
     setInterval(() => { document.getElementById('clock').innerText = new Date().toLocaleTimeString('ko-KR', {hour12: false}); }, 1000);
 </script>
 </body>
