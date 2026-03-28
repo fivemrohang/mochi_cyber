@@ -154,12 +154,20 @@
 </div>
 
 <script>
-    // 🔑 접속 암호 설정
-    const ACCESS_CODE = "8214"; 
+    const ACCESS_CODE = "1234"; 
+
+    // 페이지 로드 시 인증 상태 확인
+    window.onload = function() {
+        if (sessionStorage.getItem('wreckerAuth') === 'true') {
+            document.getElementById('auth-overlay').style.display = 'none';
+            document.getElementById('main-wrapper').style.display = 'flex';
+        }
+    };
 
     function checkAuth() {
-        const input = document.getElementById('passcode').value;
+        const input = document.getElementById('cyber0981').value;
         if (input === ACCESS_CODE) {
+            sessionStorage.setItem('wreckerAuth', 'true'); // 세션에 인증 저장
             document.getElementById('auth-overlay').style.display = 'none';
             document.getElementById('main-wrapper').style.display = 'flex';
             alert('인증에 성공하였습니다 !');
