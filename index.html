@@ -71,7 +71,7 @@
         #black-view { margin-top: 15px; padding: 15px; border-radius: 12px; text-align: center; background: rgba(255,255,255,0.03); }
         .status-badge { padding: 6px 12px; border-radius: 6px; font-weight: 800; display: inline-block; margin-bottom: 10px; }
         .is-warn { background: var(--danger); color: white; }
-        .is-not-listed { background: #475569; color: white; } /* 등재되지 않음 색상 */
+        .is-not-listed { background: #475569; color: white; }
 
         .period-group { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 15px; }
         .period-btn { padding: 10px; border-radius: 8px; border: 1px solid var(--border); background: #000; color: #fff; cursor: pointer; font-size: 13px; transition: 0.2s; }
@@ -80,6 +80,13 @@
         .notice-list { list-style: none; line-height: 2; color: #cbd5e1; }
         .notice-list li { margin-bottom: 15px; padding-left: 25px; position: relative; }
         .notice-list li::before { content: "•"; position: absolute; left: 0; color: var(--primary); font-weight: bold; }
+
+        /* 관리자 전용 테이블 스타일 */
+        .admin-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        .admin-table th { text-align: left; padding: 12px; color: var(--primary); border-bottom: 2px solid var(--border); font-size: 14px; }
+        .admin-table td { padding: 12px; border-bottom: 1px solid var(--border); color: #cbd5e1; font-size: 13px; }
+        .del-btn { background: var(--danger); color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 11px; transition: 0.2s; }
+        .del-btn:hover { opacity: 0.8; transform: scale(1.05); }
     </style>
 </head>
 <body>
@@ -97,7 +104,7 @@
         <div class="logo">🚨 사이버렉카 전용</div>
         <div class="nav-item active" id="nav-notice" onclick="switchTab('notice')">⚠️ 필독하세요</div>
         <div class="nav-item" id="nav-main" onclick="switchTab('main')">📋 렉카 메인 시스템</div>
-        <div class="nav-item admin-only" id="nav-admin" onclick="switchTab('admin')">🚫 블랙리스트 등재</div>
+        <div class="nav-item admin-only" id="nav-admin" onclick="switchTab('admin')">🚫 블랙리스트 관리</div>
     </aside>
 
     <main>
@@ -174,13 +181,30 @@
                 
                 <button class="action-btn" id="final-push-btn" onclick="pushBlack()" style="background:var(--danger); color:white; height:50px; font-size:1.1rem; opacity: 0.5; pointer-events: none;">기간을 선택해주세요</button>
             </div>
+
+            <div class="card">
+                <h3>🔓 현재 블랙리스트 명단 (즉시 해제 가능)</h3>
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>고유번호</th>
+                            <th>닉네임</th>
+                            <th>사유</th>
+                            <th>해제일</th>
+                            <th>관리</th>
+                        </tr>
+                    </thead>
+                    <tbody id="admin-list-body">
+                        </tbody>
+                </table>
+            </div>
         </div>
     </main>
 </div>
 
 <script>
     const PW = "0221"; 
-    const ADMIN_PW = "cyber00!@#$"; 
+    const ADMIN_PW = "cyber!@#$"; 
     const DB_URL = "https://cyber-mochi-default-rtdb.firebaseio.com/blacklist.json"; 
 
     let remoteData = {};
@@ -196,7 +220,7 @@
     function showMain(isAdmin) {
         document.getElementById('auth-overlay').style.display = 'none';
         document.getElementById('main-wrapper').style.display = 'flex';
-        if(isAdmin) document.getElementById('nav-admin').style.display = 'block';
+        if(isAdmin) document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'block');
         loadData();
     }
 
@@ -210,7 +234,42 @@
         try {
             const res = await fetch(DB_URL);
             remoteData = await res.json() || {};
+            renderAdminTable(); // 관리자 목록 업데이트
         } catch(e) { console.error("DB 로드 실패"); }
+    }
+
+    // 관리자 전용 목록 렌더링
+    function renderAdminTable() {
+        const body = document.getElementById('admin-list-body');
+        if(!body) return;
+        body.innerHTML = "";
+        
+        const keys = Object.keys(remoteData);
+        if(keys.length === 0) {
+            body.innerHTML = "<tr><td colspan='5' style='text-align:center; padding:20px; color:#64748b;'>현재 등재된 인원이 없습니다.</td></tr>";
+            return;
+        }
+
+        keys.forEach(uid => {
+            const item = remoteData[uid];
+            const expireDate = new Date(item.expireTimestamp).toLocaleDateString();
+            body.innerHTML += `
+                <tr>
+                    <td>${uid}</td>
+                    <td>${item.nick || '-'}</td>
+                    <td style="max-width:150px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${item.reason}</td>
+                    <td>${expireDate}</td>
+                    <td><button class="del-btn" onclick="releaseBlack('${uid}')">해제</button></td>
+                </tr>
+            `;
+        });
+    }
+
+    async function releaseBlack(uid) {
+        if(!confirm(`고유번호 ${uid} 유저를 블랙리스트에서 해제하시겠습니까?`)) return;
+        await deleteBlack(uid);
+        alert("해제되었습니다.");
+        loadData();
     }
 
     async function searchBlack() {
@@ -226,6 +285,7 @@
             if(now > expireDate) {
                 view.innerHTML = `<span class="status-badge is-not-listed">✅ 기간 만료</span><br><p>해당 인원은 기간이 지나 자동 해제되었습니다.</p>`;
                 await deleteBlack(val);
+                loadData();
                 return;
             }
             view.innerHTML = `<span class="status-badge is-warn">🚫 블랙리스트 대상</span><br>
@@ -277,6 +337,8 @@
         document.getElementById('reg-reason').value = "";
         document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('selected'));
         selectedDays = 0;
+        document.getElementById('final-push-btn').style.opacity = "0.5";
+        document.getElementById('final-push-btn').style.pointerEvents = "none";
     }
 
     function switchTab(name) {
@@ -284,7 +346,7 @@
         document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
         document.getElementById('page-' + name).classList.add('active');
         document.getElementById('nav-' + name).classList.add('active');
-        document.getElementById('title').innerText = (name === 'notice') ? '필독하세요' : (name === 'main' ? '렉카 메인 시스템' : '블랙리스트 등재');
+        document.getElementById('title').innerText = (name === 'notice') ? '필독하세요' : (name === 'main' ? '렉카 메인 시스템' : '블랙리스트 관리');
     }
 
     const PRICES = { tire: 10000000, kit: 200000000, contract: 200000000 };
@@ -325,7 +387,11 @@
 
     function copyCalc() {
         const m = `[ 사이버렉카 정산 내역 ]\n🛠 타이어: ${document.getElementById('tire').value}개\n📦 포장키트: ${document.getElementById('kit').value}개\n📜 계약서: ${document.getElementById('contract').value}개\n------------------\n💰 총 판매액: ${document.getElementById('res-user').innerText}\n🏦 공계입금(40%): ${document.getElementById('res-final').innerText}\n💸 순수익(60%): ${document.getElementById('res-net').innerText}\n-『 사이버렉카 』-`;
-        clip(m, "정산 내역");
+        copyCalcToClip(m);
+    }
+    
+    function copyCalcToClip(txt) {
+        clip(txt, "정산 내역");
     }
 
     setInterval(() => { document.getElementById('clock').innerText = new Date().toLocaleTimeString('ko-KR', {hour12: false}); }, 1000);
