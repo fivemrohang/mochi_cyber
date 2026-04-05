@@ -169,6 +169,17 @@
                 </div>
                 <p id="att-status-msg" style="font-size: 13px; color: #94a3b8;">정보 입력 후 해당하는 버튼을 클릭하세요.</p>
             </div>
+<div class="card admin-only">
+                <h3>🔍 유저별 총 근무 시간 조회 (관리자)</h3>
+                <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                    <input type="text" id="search-att-uid" class="form-input" placeholder="조회할 유저 고유번호 입력" style="margin: 0;">
+                    <button class="action-btn" onclick="calculateTotalWorkTime()" style="width: 100px; margin: 0; background: var(--primary); color: #000;">조회</button>
+                </div>
+                <div id="att-stats-view" style="padding: 15px; background: rgba(0,0,0,0.4); border-radius: 12px; border: 1px solid var(--border); text-align: center;">
+                    유저의 고유번호를 입력하여 누적 근무 시간을 확인하세요.
+                </div>
+            </div>
+
             <div class="card">
                 <h3>📅 실시간 출퇴근 명단 (최근 30건)</h3>
                 <table class="admin-table">
@@ -831,7 +842,62 @@
             alert("서버 통신 오류가 발생했습니다.");
         }
     }
+// [추가] 관리자 전용 유저별 총 근무 시간 계산 함수
+    async function calculateTotalWorkTime() {
+        const targetUid = document.getElementById('search-att-uid').value.trim();
+        const view = document.getElementById('att-stats-view');
+        
+        if(!targetUid) return alert("조회할 유저의 고유번호를 입력해주세요.");
+        
+        view.innerHTML = "<p style='color:var(--primary)'>데이터를 집계 중입니다...</p>";
+        
+        try {
+            const res = await fetch(ATT_DB_URL);
+            const data = await res.json() || {};
+            
+            let totalMs = 0;
+            let count = 0;
+            let lastNick = "";
 
+            // DB의 모든 데이터를 돌면서 해당 유저의 '퇴근 완료(isEnd: true)'된 시간만 합산
+            for(let key in data) {
+                const item = data[key];
+                if(item.uid === targetUid && item.isEnd === true && item.start && item.end) {
+                    totalMs += (item.end - item.start);
+                    count++;
+                    lastNick = item.nick;
+                }
+            }
+
+            if(count === 0) {
+                view.innerHTML = `<span class="status-badge is-not-listed">기록 없음</span><p style="margin-top:10px;">해당 고유번호로 완료된 퇴근 기록이 없습니다.</p>`;
+                return;
+            }
+
+            // 밀리초(ms)를 시간과 분으로 변환
+            const totalHrs = Math.floor(totalMs / 3600000);
+            const totalMins = Math.floor((totalMs % 3600000) / 60000);
+
+            view.innerHTML = `
+                <div style="text-align: left;">
+                    <p style="color: var(--primary); font-weight: 800; margin-bottom: 10px;">👤 ${lastNick} (${targetUid}) 님의 누적 근무 통계</p>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <div style="background:rgba(255,255,255,0.05); padding:12px; border-radius:10px; border: 1px solid var(--border);">
+                            <span style="font-size:11px; color:#94a3b8; display:block; margin-bottom:4px;">총 퇴근 횟수</span>
+                            <b style="font-size:18px;">${count}회</b>
+                        </div>
+                        <div style="background:rgba(255,255,255,0.05); padding:12px; border-radius:10px; border: 1px solid var(--border);">
+                            <span style="font-size:11px; color:#94a3b8; display:block; margin-bottom:4px;">총 누적 근무 시간</span>
+                            <b style="font-size:18px; color:var(--success)">${totalHrs}시간 ${totalMins}분</b>
+                        </div>
+                    </div>
+                </div>
+            `;
+        } catch (e) {
+            console.error(e);
+            view.innerHTML = "<p style='color:var(--danger)'>데이터 로드 중 오류가 발생했습니다.</p>";
+        }
+    }
     // 버튼 클릭 시 호출되는 함수 이름 연결
     function processReportSubmit() { submitReport(); }
     setInterval(() => { document.getElementById('clock').innerText = new Date().toLocaleTimeString('ko-KR', {hour12: false}); }, 1000);
