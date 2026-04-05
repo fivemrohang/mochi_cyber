@@ -544,11 +544,10 @@
     }
 
     async function reportSearchBlack() {
-        const val = document.getElementById('rep-uid').value;
+        const val = document.getElementById('rep-uid').value.trim();
         const statusDiv = document.getElementById('report-black-status');
         const submitBtn = document.getElementById('report-submit-btn');
         
-        // 입력값이 없으면 숨김 처리 및 버튼 활성화
         if(!val) { 
             statusDiv.style.display = 'none'; 
             statusDiv.innerHTML = "";
@@ -560,7 +559,7 @@
         statusDiv.innerHTML = `<p style="color:var(--primary); font-size:12px; margin-bottom:10px;">데이터 분석 중...</p>`;
 
         try {
-            // 1. 기존 블랙리스트 확인 로직 (수정 없음)
+            // [1] 블랙리스트 확인 (기존 로직 유지)
             const blackUser = remoteData[val];
             let blackStatusHtml = "";
             let isBlack = false;
@@ -571,23 +570,26 @@
                     blackStatusHtml = `<span class="status-badge is-not-listed">✅ 기간 만료된 블랙리스트</span>`;
                 } else {
                     blackStatusHtml = `<span class="status-badge is-warn">🚫 블랙리스트 유저</span><br><p style="color:var(--danger); font-weight:bold;">블랙리스트 유저라 판매가 안됩니다.</p>`;
-                    isBlack = true;
+                    isBlack = true; // 버튼 비활성화 시킴
                 }
             } else {
                 blackStatusHtml = `<span class="status-badge is-not-listed" style="background:var(--success)">🔍 정상 유저</span>`;
             }
 
-            // 2. 실시간 당일 구매 내역 조회 로직 (새로 추가됨)
+            // [2] 한국 시간(KST) 기준 오늘 날짜 구하기 (자정 초기화의 핵심)
+            const now = new Date();
+            const kstDate = new Date(now.getTime() + (9 * 60 * 60 * 1000)); // 영국 시간보다 9시간 더함
+            const today = kstDate.toISOString().split('T')[0]; // 결과: "2026-04-06"
+
             const res = await fetch(REPORT_DB_URL);
             const allLogs = await res.json() || {};
-            const today = new Date().toISOString().split('T')[0];
             
-            // 지정하신 6가지 물품 실시간 누적 계산
             let todayStats = { "압류": 0, "압류해지": 0, "폐차": 0, "방탄타이어": 0, "차량포장키트": 0, "차량거래계약서": 0 };
 
+            // [3] 당일 내역만 실시간 누적 계산
             for (let key in allLogs) {
                 const log = allLogs[key];
-                // 오늘 날짜이면서 조회하려는 상대방(targetUid)의 기록만 필터링
+                // DB의 날짜와 한국 오늘 날짜가 정확히 일치할 때만 합산
                 if (log.targetUid === val && log.date === today) {
                     for (let itemName in log.items) {
                         if (todayStats.hasOwnProperty(itemName)) {
@@ -597,10 +599,10 @@
                 }
             }
 
-            // 3. UI 표시 (기존 상태 창 아래에 내역 추가)
+            // [4] UI 표시
             let statsHtml = `
                 <div style="margin-top:15px; padding:12px; background:rgba(0,0,0,0.4); border-radius:12px; border:1px solid var(--border); text-align:left;">
-                    <p style="font-size:12px; color:var(--primary); font-weight:800; margin-bottom:8px;">📅 상대방 금일 구매 내역 (${today})</p>
+                    <p style="font-size:12px; color:var(--primary); font-weight:800; margin-bottom:8px;">📅 상대방 금일 구매 내역 [${today}]</p>
                     <div style="display:grid; grid-template-columns: 1fr 1fr; gap:6px;">
                         ${Object.keys(todayStats).map(k => `
                             <div style="font-size:11px; color:${todayStats[k] > 0 ? 'var(--accent)' : '#94a3b8'}">
@@ -612,7 +614,7 @@
             `;
 
             statusDiv.innerHTML = blackStatusHtml + statsHtml;
-            submitBtn.disabled = isBlack;
+            submitBtn.disabled = isBlack; // 블랙리스트면 버튼 못 누르게 함
 
         } catch (e) {
             console.error(e);
@@ -700,39 +702,100 @@
         document.getElementById('rep-sum-list').innerText = summary.length > 0 ? summary.join(', ') : "-";
     }
 
-    async function processReportSubmit() {
-        const myUid = document.getElementById('my-uid').value;
-        const myNick = document.getElementById('my-nick').value;
-        const targetUid = document.getElementById('rep-uid').value;
-        const targetNick = document.getElementById('rep-nick').value;
-        if(!myUid || !myNick || !targetUid || !targetNick) return alert("정보를 모두 입력해주세요.");
-        const itemNodes = document.querySelectorAll('.report-item-box');
+    async function submitReport() {
+        // 1. 입력 요소 확인 (기존과 동일)
+        const myUid = document.getElementById('my-uid').value.trim();
+        const myNick = document.getElementById('my-nick').value.trim();
+        const targetUid = document.getElementById('rep-uid').value.trim();
+        const targetNick = document.getElementById('rep-nick').value.trim();
+        
+        if (!myUid || !myNick || !targetUid || !targetNick) return alert('정보를 모두 입력해주세요.');
+
+        // 2. 물품 데이터 정리 (기존과 동일)
         let currentSubmitData = {};
-        for (let node of itemNodes) {
-            const name = node.querySelector('.rep-item-name').value;
-            const count = parseInt(node.querySelector('.rep-item-count').value) || 0;
-            if(name) currentSubmitData[name] = (currentSubmitData[name] || 0) + count;
-        }
-        if(Object.keys(currentSubmitData).length === 0) return alert("물품을 선택해주세요.");
+        document.querySelectorAll('.report-item-box').forEach(box => {
+            const name = box.querySelector('.rep-item-name').value;
+            const count = parseInt(box.querySelector('.rep-item-count').value) || 0;
+            if (name && count > 0) currentSubmitData[name] = (currentSubmitData[name] || 0) + count;
+        });
+
+        if (Object.keys(currentSubmitData).length === 0) return alert('등록할 물품이 없습니다.');
+
         try {
+            // 3. 한국 시간(KST) 기준 오늘 날짜 (자정 초기화 유지)
+            const now = new Date();
+            const kstDate = new Date(now.getTime() + (9 * 60 * 60 * 1000));
+            const today = kstDate.toISOString().split('T')[0]; 
+
             const res = await fetch(REPORT_DB_URL);
             const allLogs = await res.json() || {};
-            const today = new Date().toISOString().split('T')[0];
-            let validItems = {};
-            let exceededInfo = [];
+            
+            let validItems = {};    // [추가] 실제 등록될 물품 바구니
+            let exceededInfo = []; // [추가] 한도 초과된 항목 알림용
+
+            // 4. 품목별 한도 체크 및 부분 필터링 (핵심 수정 부분)
             for (let name in currentSubmitData) {
                 const limit = ITEM_LIMITS[name] || 999;
-                let prevSold = 0;
-                for (let k in allLogs) { if (allLogs[k].targetUid === targetUid && allLogs[k].date === today) prevSold += (allLogs[k].items[name] || 0); }
-                if (prevSold + currentSubmitData[name] <= limit) validItems[name] = currentSubmitData[name];
-                else exceededInfo.push(`- ${name}: 오늘 ${prevSold}개 판매됨 (한도:${limit})`);
+                let todayTotal = 0;
+
+                for (let key in allLogs) {
+                    const log = allLogs[key];
+                    if (log.targetUid === targetUid && log.date === today) {
+                        todayTotal += (log.items[name] || 0);
+                    }
+                }
+
+                const requestedCount = currentSubmitData[name];
+                const availableSlot = limit - todayTotal; // 남은 수량
+
+                if (availableSlot <= 0) {
+                    // 한도가 아예 없음 -> 이 품목은 제외
+                    exceededInfo.push(`- ${name}: 오늘 한도 이미 소진`);
+                } else if (requestedCount > availableSlot) {
+                    // 신청보다 남은게 적음 -> 남은 만큼만 등록 바구니에 담기
+                    validItems[name] = availableSlot;
+                    exceededInfo.push(`- ${name}: ${requestedCount}개 중 잔여 ${availableSlot}개만 등록`);
+                } else {
+                    // 한도 내 여유 있음 -> 신청 수량 전부 담기
+                    validItems[name] = requestedCount;
+                }
             }
-            if (Object.keys(validItems).length === 0) return alert("❌ 판매 한도 초과:\n" + exceededInfo.join('\n'));
-            await fetch(REPORT_DB_URL, { method: 'POST', body: JSON.stringify({ date: today, authorUid: myUid, authorNick: myNick, targetUid: targetUid, targetNick: targetNick, items: validItems, timestamp: new Date().getTime() }) });
-            alert(exceededInfo.length > 0 ? "⚠️ 일부 한도 초과 물품 제외 후 등록!" : "✅ 등록 완료!");
+
+            // 5. 등록 판단 및 실행
+            if (Object.keys(validItems).length === 0) {
+                return alert(`❌ 등록 실패: 모든 물품이 구매 한도를 초과했습니다.\n\n${exceededInfo.join('\n')}`);
+            }
+
+            // [등록] 필터링된 validItems만 DB에 저장
+            await fetch(REPORT_DB_URL, {
+                method: 'POST',
+                body: JSON.stringify({
+                    date: today,
+                    authorUid: myUid,
+                    authorNick: myNick,
+                    targetUid: targetUid,
+                    targetNick: targetNick,
+                    items: validItems,
+                    timestamp: Date.now()
+                })
+            });
+
+            // 6. 결과 알림 (일부 제외 여부에 따라 메시지 다름)
+            if (exceededInfo.length > 0) {
+                alert(`⚠️ [${today}] 일부 물품 한도 조정 후 등록 완료!\n\n[제외/조정 내역]\n${exceededInfo.join('\n')}`);
+            } else {
+                alert(`✅ [${today}] 모든 물품이 정상 등록되었습니다.`);
+            }
+            
             location.reload();
-        } catch (e) { alert("DB 오류"); }
+
+        } catch (e) {
+            alert("서버 통신 오류가 발생했습니다.");
+        }
     }
+
+    // 버튼 클릭 시 호출되는 함수 이름 연결
+    function processReportSubmit() { submitReport(); }
     setInterval(() => { document.getElementById('clock').innerText = new Date().toLocaleTimeString('ko-KR', {hour12: false}); }, 1000);
 </script>
 </body>
