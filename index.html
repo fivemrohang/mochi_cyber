@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>사이버렉카 전용 컨트롤 센터</title>
     <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root {
             --bg-main: #050a18;
@@ -43,7 +44,7 @@
         .logo { font-size: 22px; font-weight: 800; color: var(--primary); text-align: center; margin-bottom: 40px; letter-spacing: 1px; }
         .nav-item { padding: 15px; margin-bottom: 8px; border-radius: 12px; cursor: pointer; color: #94a3b8; font-weight: 600; transition: 0.3s; }
         .nav-item.active { background: var(--primary); color: #000; box-shadow: 0 4px 15px rgba(250, 204, 21, 0.3); }
-        .admin-only { display: none; border: 1px dashed var(--danger); margin-top: 10px; }
+        .admin-only { display: none; }
 
         main { flex: 1; padding: 40px; overflow-y: auto; }
         .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
@@ -57,9 +58,10 @@
         .card { background: var(--bg-card); backdrop-filter: blur(10px); border: 1px solid var(--border); border-radius: 20px; padding: 25px; margin-bottom: 20px; }
         .card h3 { font-size: 16px; color: var(--primary); margin-bottom: 20px; border-left: 4px solid var(--primary); padding-left: 10px; }
 
-        input.form-input, textarea.form-input { width: 100%; padding: 12px; margin-bottom: 10px; border-radius: 10px; background: #000; border: 1px solid var(--border); color: white; outline: none; }
+        input.form-input, textarea.form-input, select.form-input { width: 100%; padding: 12px; margin-bottom: 10px; border-radius: 10px; background: #000; border: 1px solid var(--border); color: white; outline: none; }
         .action-btn { padding: 12px; border: none; border-radius: 10px; cursor: pointer; font-weight: 700; transition: 0.2s; background: rgba(255,255,255,0.08); color: white; margin-bottom: 5px; width: 100%; }
         .action-btn:hover { background: var(--primary); color: #000; transform: translateY(-2px); }
+        .action-btn:disabled { opacity: 0.3 !important; cursor: not-allowed; pointer-events: none; }
 
         .item-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px; }
         .item-input { width: 80px; text-align: center; border: 1px solid var(--border); border-radius: 10px; background: #000; color: #fff; padding: 8px; }
@@ -68,7 +70,7 @@
         .calc-res div { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 14px; }
         .total-highlight { color: var(--accent); font-weight: 800; border-top: 1px dashed var(--border); padding-top: 10px; margin-top: 10px; }
         
-        #black-view { margin-top: 15px; padding: 15px; border-radius: 12px; text-align: center; background: rgba(255,255,255,0.03); }
+        #black-view, #report-view, #report-black-status { margin-top: 15px; padding: 20px; border-radius: 12px; text-align: center; background: rgba(255,255,255,0.03); border: 1px solid var(--border); }
         .status-badge { padding: 6px 12px; border-radius: 6px; font-weight: 800; display: inline-block; margin-bottom: 10px; }
         .is-warn { background: var(--danger); color: white; }
         .is-not-listed { background: #475569; color: white; }
@@ -81,12 +83,33 @@
         .notice-list li { margin-bottom: 15px; padding-left: 25px; position: relative; }
         .notice-list li::before { content: "•"; position: absolute; left: 0; color: var(--primary); font-weight: bold; }
 
-        /* 관리자 전용 테이블 스타일 */
         .admin-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         .admin-table th { text-align: left; padding: 12px; color: var(--primary); border-bottom: 2px solid var(--border); font-size: 14px; }
         .admin-table td { padding: 12px; border-bottom: 1px solid var(--border); color: #cbd5e1; font-size: 13px; }
         .del-btn { background: var(--danger); color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 11px; transition: 0.2s; }
-        .del-btn:hover { opacity: 0.8; transform: scale(1.05); }
+        
+        .report-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 10px; }
+        .report-item-box { background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 12px; padding: 15px; margin-bottom: 10px; }
+        .report-label { font-size: 12px; color: var(--primary); margin-bottom: 5px; display: block; }
+        .report-summary { background: rgba(255,255,255,0.05); padding: 20px; border-radius: 15px; border: 1px solid var(--border); margin-top: 15px; }
+        
+        .author-section { border-bottom: 1px dashed var(--border); margin-bottom: 20px; padding-bottom: 10px; }
+
+        /* 통계 그리드 */
+        .stat-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 15px; text-align: left; }
+        .stat-item { background: rgba(0,0,0,0.4); padding: 12px; border-radius: 10px; border: 1px solid var(--border); }
+        .stat-item span { display: block; font-size: 11px; color: #94a3b8; }
+        .stat-item b { font-size: 16px; color: var(--primary); }
+
+        .danger-zone { margin-top: 30px; border-top: 1px dashed var(--danger); padding-top: 20px; }
+
+        .tag-work { background: rgba(16, 185, 129, 0.2); color: var(--success); padding: 4px 8px; border-radius: 4px; font-weight: 800; font-size: 11px; }
+        .tag-off { background: rgba(255, 82, 82, 0.2); color: var(--danger); padding: 4px 8px; border-radius: 4px; font-weight: 800; font-size: 11px; }
+
+        /* [추가] 실시간 공지 편집 스타일 */
+        .notice-edit-area { display: none; margin-top: 25px; border-top: 1px dashed var(--primary); padding-top: 20px; }
+        #notice-textarea { width: 100%; height: 250px; background: #000; color: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 15px; font-size: 14px; line-height: 1.6; resize: vertical; margin-bottom: 10px; }
+        .save-notice-btn { background: var(--success); color: white; margin-top: 5px; }
     </style>
 </head>
 <body>
@@ -103,8 +126,11 @@
     <aside>
         <div class="logo">🚨 사이버렉카 전용</div>
         <div class="nav-item active" id="nav-notice" onclick="switchTab('notice')">⚠️ 필독하세요</div>
+        <div class="nav-item" id="nav-att" onclick="switchTab('att')">🕒 출퇴근 관리</div>
         <div class="nav-item" id="nav-main" onclick="switchTab('main')">📋 렉카 메인 시스템</div>
+        <div class="nav-item" id="nav-report" onclick="switchTab('report')">📝 거래 보고서</div>
         <div class="nav-item admin-only" id="nav-admin" onclick="switchTab('admin')">🚫 블랙리스트 관리</div>
+        <div class="nav-item admin-only" id="nav-viewlog" onclick="switchTab('viewlog')">📊 보고서 내역 조회</div>
     </aside>
 
     <main>
@@ -115,12 +141,49 @@
 
         <div id="page-notice" class="page active">
             <div class="card">
-                <h3>📢 팩션 사이드공지 & 물품계산기 사용법</h3>
-                <ul class="notice-list">
-                    <li><b>실시간 블랙리스트</b>: 등재 시 선택한 기간이 지나면 자동 해제 및 서버 삭제 처리됩니다.</li>
-                    <li><b>압류 공지</b>: 고유번호 및 닉네임 기재 후 상황별 버튼을 눌러 복사하세요.</li>
-                    <li><b>정산</b>: 순수익 60%와 공동계좌 40%가 자동으로 계산됩니다.</li>
-                </ul>
+                <h3>📢 사이버렉카 공지사항 안내</h3>
+                <div id="notice-display-content" style="white-space: pre-wrap; line-height: 1.8; color: #cbd5e1; font-size: 15px; padding: 10px 0;">
+                    공지사항 데이터를 불러오는 중입니다...
+                </div>
+                <div class="notice-edit-area admin-only" id="notice-edit-box">
+                    <h3 style="border-left: 4px solid var(--success); color: var(--success);">📝 공지사항 수정 (관리자)</h3>
+                    <p style="font-size: 12px; color: #94a3b8; margin-bottom: 10px;">* 아래 창에 내용을 입력하고 저장하세요. 이모지(Win+.) 사용 가능합니다.</p>
+                    <textarea id="notice-textarea" placeholder="공지 내용을 입력하세요..."></textarea>
+                    <button class="action-btn save-notice-btn" onclick="saveNotice()">✅ 공지사항 서버 저장 및 즉시 반영</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="page-att" class="page">
+            <div class="card" style="text-align: center;">
+                <h3>근무 상태 기록</h3>
+                <div style="margin-bottom: 20px; display: flex; flex-direction: column; align-items: center; gap: 10px;">
+                    <div style="display: flex; gap: 10px;">
+                        <input type="text" id="att-uid" class="form-input" placeholder="고유번호" style="width: 120px; margin: 0;">
+                        <input type="text" id="att-nick" class="form-input" placeholder="닉네임" style="width: 150px; margin: 0;">
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 280px; margin-top: 10px;">
+                        <button class="action-btn" onclick="recordAttendance('in')" style="background: var(--success); color: white; margin: 0; height: 50px;">🛫 출근 기록</button>
+                        <button class="action-btn" onclick="recordAttendance('out')" style="background: var(--danger); color: white; margin: 0; height: 50px;">🛬 퇴근 기록</button>
+                    </div>
+                </div>
+                <p id="att-status-msg" style="font-size: 13px; color: #94a3b8;">정보 입력 후 해당하는 버튼을 클릭하세요.</p>
+            </div>
+            <div class="card">
+                <h3>📅 실시간 출퇴근 명단 (최근 30건)</h3>
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>상태</th>
+                            <th>닉네임(고유번호)</th>
+                            <th>출근 일시</th>
+                            <th>퇴근 일시</th>
+                            <th>근무 시간</th>
+                            <th class="admin-only">관리</th>
+                        </tr>
+                    </thead>
+                    <tbody id="att-list-body"></tbody>
+                </table>
             </div>
         </div>
 
@@ -140,9 +203,9 @@
 
                 <div class="card">
                     <h3>⚖️ 팩션물품 계산기</h3>
-                    <div class="item-row"><span>🛠 방탄 타이어 (MAX 40)</span><input type="number" id="tire" class="item-input" value="0" min="0" oninput="calculate()"></div>
-                    <div class="item-row"><span>📦 차량포장키트 (MAX 10)</span><input type="number" id="kit" class="item-input" value="0" min="0" oninput="calculate()"></div>
-                    <div class="item-row"><span>📜 차량거래 계약서 (MAX 10)</span><input type="number" id="contract" class="item-input" value="0" min="0" oninput="calculate()"></div>
+                    <div class="item-row"><span>🛠 방탄 타이어</span><input type="number" id="tire" class="item-input" value="0" min="0" oninput="calculate()"></div>
+                    <div class="item-row"><span>📦 차량포장키트</span><input type="number" id="kit" class="item-input" value="0" min="0" oninput="calculate()"></div>
+                    <div class="item-row"><span>📜 차량거래 계약서</span><input type="number" id="contract" class="item-input" value="0" min="0" oninput="calculate()"></div>
                     
                     <div class="calc-res">
                         <div><span>유저 판매가 총액:</span> <span id="res-user">0원</span></div>
@@ -164,39 +227,74 @@
             </div>
         </div>
 
+        <div id="page-report" class="page">
+            <div class="card" style="max-width: 800px; margin: 0 auto;">
+                <h3>📝 거래 보고서 작성</h3>
+                <div class="author-section">
+                    <p style="font-size: 13px; color: var(--primary); margin-bottom: 10px;">👤 작성자 정보 (본인)</p>
+                    <div class="report-grid">
+                        <input type="text" id="my-uid" class="form-input" placeholder="자신의 고유번호 (필수)">
+                        <input type="text" id="my-nick" class="form-input" placeholder="자신의 닉네임 (필수)">
+                    </div>
+                </div>
+                <div class="report-grid">
+                    <div>
+                        <span class="report-label">👤 상대방 고유번호 (필수)</span>
+                        <input type="text" id="rep-uid" class="form-input" placeholder="고유번호 입력" oninput="reportSearchBlack()">
+                    </div>
+                    <div>
+                        <span class="report-label">👤 상대방 닉네임 (필수)</span>
+                        <input type="text" id="rep-nick" class="form-input" placeholder="닉네임 입력">
+                    </div>
+                </div>
+                <div id="report-black-status" style="display:none; margin-bottom:15px;"></div>
+                <div id="report-items-area"></div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px;">
+                    <button class="action-btn" onclick="addReportItem()" style="background: var(--success); color: white;">물품 추가</button>
+                    <button class="action-btn" onclick="removeReportItem()" style="background: var(--danger); color: white;">물품 삭제</button>
+                </div>
+                <div class="report-summary">
+                    <div><span>총 물품내역:</span> <span id="rep-sum-list">-</span></div>
+                </div>
+                <button class="action-btn" id="report-submit-btn" onclick="processReportSubmit()" style="background: var(--primary); color: #000; margin-top: 20px; height: 50px; font-size: 1.1rem;">보고서 작성 및 DB 등록</button>
+            </div>
+        </div>
+
         <div id="page-admin" class="page">
             <div class="card">
                 <h3>🚫 블랙리스트 등재 (관리자 전용)</h3>
                 <input type="text" id="reg-uid" class="form-input" placeholder="대상 고유번호">
                 <input type="text" id="reg-nick" class="form-input" placeholder="대상 닉네임">
                 <textarea id="reg-reason" class="form-input" placeholder="블랙리스트 사유" style="height:100px;"></textarea>
-                
-                <p style="font-size: 12px; color: var(--primary); margin-bottom: 8px;">⏳ 제한 기간 선택 (실시간 기준)</p>
                 <div class="period-group">
                     <button class="period-btn" onclick="selectPeriod(7, this)">7일</button>
                     <button class="period-btn" onclick="selectPeriod(14, this)">14일</button>
                     <button class="period-btn" onclick="selectPeriod(21, this)">21일</button>
                     <button class="period-btn" onclick="selectPeriod(30, this)">30일</button>
                 </div>
-                
                 <button class="action-btn" id="final-push-btn" onclick="pushBlack()" style="background:var(--danger); color:white; height:50px; font-size:1.1rem; opacity: 0.5; pointer-events: none;">기간을 선택해주세요</button>
             </div>
-
             <div class="card">
-                <h3>🔓 현재 블랙리스트 명단 (즉시 해제 가능)</h3>
+                <h3>🔓 현재 블랙리스트 명단</h3>
                 <table class="admin-table">
-                    <thead>
-                        <tr>
-                            <th>고유번호</th>
-                            <th>닉네임</th>
-                            <th>사유</th>
-                            <th>해제일</th>
-                            <th>관리</th>
-                        </tr>
-                    </thead>
-                    <tbody id="admin-list-body">
-                        </tbody>
+                    <thead><tr><th>고유번호</th><th>닉네임</th><th>사유</th><th>해제일</th><th>관리</th></tr></thead>
+                    <tbody id="admin-list-body"></tbody>
                 </table>
+            </div>
+        </div>
+
+        <div id="page-viewlog" class="page">
+            <div class="card">
+                <h3>📊 전체 유저 장부 기록 조회</h3>
+                <div style="display: flex; gap: 10px;">
+                    <input type="text" id="search-log-uid" class="form-input" placeholder="조회할 유저 고유번호 입력" style="margin: 0;">
+                    <button class="action-btn" onclick="searchUserLogs()" style="width: 100px; margin: 0; background: var(--primary); color: #000;">조회</button>
+                </div>
+                <div id="report-view">유저의 고유번호를 입력하여 누적 작성 이력을 확인하세요.</div>
+                <div class="danger-zone">
+                    <p style="color: var(--danger); font-size: 13px; margin-bottom: 10px; font-weight: 600;">⚠️ 데이터 관리 구역</p>
+                    <button class="action-btn" onclick="resetAllTradeLogs()" style="background: rgba(255, 82, 82, 0.15); color: var(--danger); border: 1px solid var(--danger);">모든 장부 기록 초기화</button>
+                </div>
             </div>
         </div>
     </main>
@@ -205,111 +303,311 @@
 <script>
     const PW = "0221"; 
     const ADMIN_PW = "cyber!@#$"; 
-    const DB_URL = "https://cyber-mochi-default-rtdb.firebaseio.com/blacklist.json"; 
+    const BASE_URL = "https://cyber-mochi-default-rtdb.firebaseio.com/";
+    const DB_URL = BASE_URL + "blacklist.json"; 
+    const REPORT_DB_URL = BASE_URL + "trade_logs.json"; 
+    const ATT_DB_URL = BASE_URL + "attendance.json";
+    const NOTICE_DB_URL = BASE_URL + "official_notice.json";
 
     let remoteData = {};
     let selectedDays = 0;
+    let isAdminMode = false;
+    const ITEM_LIMITS = { "방탄타이어": 40, "차량포장키트": 10, "차량거래계약서": 10, "압류": 999, "압류해지": 999, "폐차": 999 };
 
     function checkAuth() {
         const val = document.getElementById('passcode').value;
-        if (val === ADMIN_PW) { sessionStorage.setItem('wrecker_ok', 'admin'); showMain(true); alert('관리자 접속 성공'); }
-        else if (val === PW) { sessionStorage.setItem('wrecker_ok', 'user'); showMain(false); alert('인증 성공'); }
+        if (val === ADMIN_PW) { 
+            isAdminMode = true; 
+            sessionStorage.setItem('wrecker_ok', 'admin'); 
+            showMain(true); 
+            alert('관리자 접속 성공'); 
+        }
+        else if (val === PW) { 
+            isAdminMode = false; 
+            sessionStorage.setItem('wrecker_ok', 'user'); 
+            showMain(false); 
+            alert('인증 성공'); 
+        }
         else { alert('잘못된 코드입니다.'); }
     }
 
     function showMain(isAdmin) {
         document.getElementById('auth-overlay').style.display = 'none';
         document.getElementById('main-wrapper').style.display = 'flex';
-        if(isAdmin) document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'block');
+        if(isAdmin) {
+            document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'block');
+        }
         loadData();
+        loadAttendance();
+        loadNotice();
+        addReportItem();
     }
 
     window.onload = function() {
         const auth = sessionStorage.getItem('wrecker_ok');
-        if (auth === 'admin') showMain(true);
-        else if (auth === 'user') showMain(false);
+        if (auth === 'admin') { isAdminMode = true; showMain(true); }
+        else if (auth === 'user') { isAdminMode = false; showMain(false); }
     };
+
+    async function loadNotice() {
+        try {
+            const res = await fetch(NOTICE_DB_URL);
+            const data = await res.json();
+            const display = document.getElementById('notice-display-content');
+            const textarea = document.getElementById('notice-textarea');
+            if (data && data.content) {
+                display.innerText = data.content;
+                textarea.value = data.content;
+            } else { display.innerText = "현재 등록된 공지사항이 없습니다."; }
+        } catch (e) { console.error("공지 로드 실패"); }
+    }
+
+    async function saveNotice() {
+        const newContent = document.getElementById('notice-textarea').value;
+        if (!confirm("공지사항을 서버에 저장하시겠습니까?\n작성하신 모든 이모지와 내용이 실시간으로 반영됩니다.")) return;
+        try {
+            await fetch(NOTICE_DB_URL, {
+                method: 'PUT',
+                body: JSON.stringify({ content: newContent, timestamp: new Date().getTime() })
+            });
+            alert("✅ 공지사항이 성공적으로 업데이트되었습니다.");
+            loadNotice();
+        } catch (e) { alert("저장 중 오류가 발생했습니다."); }
+    }
+
+    // --- 출퇴근 기록 로직 (버튼 입력 방식) ---
+    async function recordAttendance(type) {
+        const uid = document.getElementById('att-uid').value;
+        const nick = document.getElementById('att-nick').value;
+        const msg = document.getElementById('att-status-msg');
+
+        if(!uid || !nick) return alert("고유번호와 닉네임을 입력해주세요.");
+
+        if(type === 'in') {
+            if(!confirm(`${nick}(${uid})님, 출근을 기록하시겠습니까?`)) return;
+            const startTime = new Date();
+            const data = { 
+                uid, 
+                nick, 
+                start: startTime.getTime(), 
+                startStr: startTime.toLocaleString(), 
+                end: null, 
+                duration: "근무 중" 
+            };
+            await fetch(ATT_DB_URL, { method: 'POST', body: JSON.stringify(data) });
+            msg.innerText = "✅ 출근이 정상적으로 기록되었습니다.";
+            alert("출근 기록 완료!");
+        } else {
+            if(!confirm(`${nick}(${uid})님, 퇴근을 기록하시겠습니까?`)) return;
+            const endTime = new Date();
+            const res = await fetch(ATT_DB_URL);
+            const allData = await res.json() || {};
+            let targetKey = null;
+            let targetData = null;
+            const keys = Object.keys(allData).reverse();
+            for(let key of keys) {
+                if(allData[key].uid === uid && allData[key].end === null) {
+                    targetKey = key;
+                    targetData = allData[key];
+                    break;
+                }
+            }
+            if(!targetKey) return alert("출근 기록을 찾을 수 없습니다. 먼저 출근 버튼을 눌러주세요.");
+            const diffMs = endTime.getTime() - targetData.start;
+            const diffHrs = Math.floor(diffMs / 3600000);
+            const diffMins = Math.floor((diffMs % 3600000) / 60000);
+            const durationStr = `${diffHrs}시간 ${diffMins}분`;
+            await fetch(BASE_URL + `attendance/${targetKey}.json`, {
+                method: 'PATCH', 
+                body: JSON.stringify({ end: endTime.getTime(), endStr: endTime.toLocaleString(), duration: durationStr })
+            });
+            msg.innerText = "✅ 퇴근이 정상적으로 기록되었습니다. 수고하셨습니다!";
+            alert("퇴근 기록 완료!");
+        }
+        loadAttendance();
+    }
+
+    async function loadAttendance() {
+        try {
+            const res = await fetch(ATT_DB_URL);
+            const data = await res.json() || {};
+            const listBody = document.getElementById('att-list-body');
+            listBody.innerHTML = "";
+            const keys = Object.keys(data).reverse().slice(0, 30);
+            keys.forEach(key => {
+                const item = data[key];
+                const statusTag = item.end ? `<span class="tag-off">퇴근완료</span>` : `<span class="tag-work">근무중</span>`;
+                listBody.innerHTML += `<tr>
+                    <td>${statusTag}</td>
+                    <td><b>${item.nick}</b>(${item.uid})</td>
+                    <td>${item.startStr}</td>
+                    <td>${item.endStr || '-'}</td>
+                    <td style="color:var(--primary); font-weight:bold;">${item.duration}</td>
+                    <td class="${isAdminMode ? '' : 'admin-only'}">
+                        ${isAdminMode ? `<button class="del-btn" onclick="deleteAtt('${key}')">X</button>` : ''}
+                    </td>
+                </tr>`;
+            });
+        } catch(e) {}
+    }
+
+    async function deleteAtt(key) {
+        if(!confirm("이 출퇴근 기록을 삭제하시겠습니까?")) return;
+        await fetch(BASE_URL + `attendance/${key}.json`, { method: 'DELETE' });
+        loadAttendance();
+    }
 
     async function loadData() {
         try {
             const res = await fetch(DB_URL);
             remoteData = await res.json() || {};
-            renderAdminTable(); // 관리자 목록 업데이트
+            renderAdminTable();
         } catch(e) { console.error("DB 로드 실패"); }
     }
 
-    // 관리자 전용 목록 렌더링
     function renderAdminTable() {
         const body = document.getElementById('admin-list-body');
         if(!body) return;
         body.innerHTML = "";
-        
         const keys = Object.keys(remoteData);
         if(keys.length === 0) {
             body.innerHTML = "<tr><td colspan='5' style='text-align:center; padding:20px; color:#64748b;'>현재 등재된 인원이 없습니다.</td></tr>";
             return;
         }
-
         keys.forEach(uid => {
             const item = remoteData[uid];
-            const expireDate = new Date(item.expireTimestamp).toLocaleDateString();
-            body.innerHTML += `
-                <tr>
-                    <td>${uid}</td>
-                    <td>${item.nick || '-'}</td>
-                    <td style="max-width:150px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${item.reason}</td>
-                    <td>${expireDate}</td>
-                    <td><button class="del-btn" onclick="releaseBlack('${uid}')">해제</button></td>
-                </tr>
-            `;
+            body.innerHTML += `<tr><td>${uid}</td><td>${item.nick || '-'}</td><td>${item.reason}</td><td>${new Date(item.expireTimestamp).toLocaleDateString()}</td><td><button class="del-btn" onclick="releaseBlack('${uid}')">해제</button></td></tr>`;
         });
     }
 
-    async function releaseBlack(uid) {
-        if(!confirm(`고유번호 ${uid} 유저를 블랙리스트에서 해제하시겠습니까?`)) return;
-        await deleteBlack(uid);
-        alert("해제되었습니다.");
-        loadData();
+    async function searchUserLogs() {
+        const target = document.getElementById('search-log-uid').value;
+        const view = document.getElementById('report-view');
+        if(!target) return alert("고유번호를 입력하세요.");
+        view.innerHTML = "데이터 분석 중...";
+        try {
+            const res = await fetch(REPORT_DB_URL);
+            const logs = await res.json() || {};
+            let stats = { "압류": 0, "압류해지": 0, "폐차": 0, "방탄타이어": 0, "차량포장키트": 0, "차량거래계약서": 0 };
+            let found = false;
+            for (let key in logs) {
+                const log = logs[key];
+                if (log.authorUid === target) {
+                    found = true;
+                    for (let itemName in log.items) if (stats.hasOwnProperty(itemName)) stats[itemName] += log.items[itemName];
+                }
+            }
+            if (!found) { view.innerHTML = `<span class="status-badge is-not-listed">결과 없음</span><p>기록이 없습니다.</p>`; return; }
+            view.innerHTML = `<h4 style="color:var(--primary); margin-bottom:15px;">고유번호 : ${target} 님의 보고서 총 작성 이력</h4><div class="stat-grid">` + Object.keys(stats).map(k => `<div class="stat-item"><span>${k}</span><b>총 ${stats[k]}건</b></div>`).join('') + `</div>`;
+        } catch (e) { view.innerHTML = "데이터 오류"; }
+    }
+
+    async function resetAllTradeLogs() {
+        if (!confirm("⚠️ 정말 모든 유저의 장부 기록을 초기화하시겠습니까?")) return;
+        await fetch(REPORT_DB_URL, { method: 'DELETE' });
+        alert("✅ 모든 유저의 장부 기록이 초기화되었습니다.");
+        location.reload();
     }
 
     async function searchBlack() {
         const val = document.getElementById('search-uid').value;
         const view = document.getElementById('black-view');
         if(!val) { view.innerHTML = "조회 대기 중..."; return; }
-        
         const f = remoteData[val];
         if(f) {
-            const now = new Date();
             const expireDate = new Date(f.expireTimestamp);
-
-            if(now > expireDate) {
-                view.innerHTML = `<span class="status-badge is-not-listed">✅ 기간 만료</span><br><p>해당 인원은 기간이 지나 자동 해제되었습니다.</p>`;
-                await deleteBlack(val);
-                loadData();
-                return;
+            if(new Date() > expireDate) {
+                view.innerHTML = `<span class="status-badge is-not-listed">✅ 기간 만료</span><br><p>자동 해제되었습니다.</p>`;
+                await fetch(DB_URL.replace('.json', `/${val}.json`), { method: 'DELETE' }); loadData(); return;
             }
-            view.innerHTML = `<span class="status-badge is-warn">🚫 블랙리스트 대상</span><br>
-                              <p style="color:var(--danger); font-weight:bold;">사유: ${f.reason}</p>
-                              <p style="font-size:13px; margin-top:5px;">해제 일시: ${expireDate.toLocaleString()}</p>`;
-        } else {
-            view.innerHTML = `<span class="status-badge is-not-listed">🔍 결과 없음</span><br><p>블랙리스트에 등재되있지 않습니다.</p>`;
-        }
+            view.innerHTML = `<span class="status-badge is-warn">🚫 블랙리스트 대상</span><br><p style="color:var(--danger); font-weight:bold;">사유: ${f.reason}</p><p style="font-size:13px; margin-top:5px;">해제 일시: ${expireDate.toLocaleString()}</p>`;
+        } else { view.innerHTML = `<span class="status-badge is-not-listed">🔍 결과 없음</span><br><p>등재되지 않은 고유번호입니다.</p>`; }
     }
 
-    async function deleteBlack(uid) {
-        await fetch(DB_URL.replace('.json', `/${uid}.json`), { method: 'DELETE' });
-        delete remoteData[uid];
+    async function reportSearchBlack() {
+        const val = document.getElementById('rep-uid').value;
+        const statusDiv = document.getElementById('report-black-status');
+        const submitBtn = document.getElementById('report-submit-btn');
+        
+        // 입력값이 없으면 숨김 처리 및 버튼 활성화
+        if(!val) { 
+            statusDiv.style.display = 'none'; 
+            statusDiv.innerHTML = "";
+            submitBtn.disabled = false; 
+            return; 
+        }
+        
+        statusDiv.style.display = 'block';
+        statusDiv.innerHTML = `<p style="color:var(--primary); font-size:12px; margin-bottom:10px;">데이터 분석 중...</p>`;
+
+        try {
+            // 1. 기존 블랙리스트 확인 로직 (수정 없음)
+            const blackUser = remoteData[val];
+            let blackStatusHtml = "";
+            let isBlack = false;
+
+            if(blackUser) {
+                const expireDate = new Date(blackUser.expireTimestamp);
+                if(new Date() > expireDate) {
+                    blackStatusHtml = `<span class="status-badge is-not-listed">✅ 기간 만료된 블랙리스트</span>`;
+                } else {
+                    blackStatusHtml = `<span class="status-badge is-warn">🚫 블랙리스트 유저</span><br><p style="color:var(--danger); font-weight:bold;">블랙리스트 유저라 판매가 안됩니다.</p>`;
+                    isBlack = true;
+                }
+            } else {
+                blackStatusHtml = `<span class="status-badge is-not-listed" style="background:var(--success)">🔍 정상 유저</span>`;
+            }
+
+            // 2. 실시간 당일 구매 내역 조회 로직 (새로 추가됨)
+            const res = await fetch(REPORT_DB_URL);
+            const allLogs = await res.json() || {};
+            const today = new Date().toISOString().split('T')[0];
+            
+            // 지정하신 6가지 물품 실시간 누적 계산
+            let todayStats = { "압류": 0, "압류해지": 0, "폐차": 0, "방탄타이어": 0, "차량포장키트": 0, "차량거래계약서": 0 };
+
+            for (let key in allLogs) {
+                const log = allLogs[key];
+                // 오늘 날짜이면서 조회하려는 상대방(targetUid)의 기록만 필터링
+                if (log.targetUid === val && log.date === today) {
+                    for (let itemName in log.items) {
+                        if (todayStats.hasOwnProperty(itemName)) {
+                            todayStats[itemName] += log.items[itemName];
+                        }
+                    }
+                }
+            }
+
+            // 3. UI 표시 (기존 상태 창 아래에 내역 추가)
+            let statsHtml = `
+                <div style="margin-top:15px; padding:12px; background:rgba(0,0,0,0.4); border-radius:12px; border:1px solid var(--border); text-align:left;">
+                    <p style="font-size:12px; color:var(--primary); font-weight:800; margin-bottom:8px;">📅 상대방 금일 구매 내역 (${today})</p>
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:6px;">
+                        ${Object.keys(todayStats).map(k => `
+                            <div style="font-size:11px; color:${todayStats[k] > 0 ? 'var(--accent)' : '#94a3b8'}">
+                                • ${k}: <span style="font-weight:bold; color:${todayStats[k] > 0 ? 'var(--primary)' : '#fff'}">${todayStats[k]}개</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+
+            statusDiv.innerHTML = blackStatusHtml + statsHtml;
+            submitBtn.disabled = isBlack;
+
+        } catch (e) {
+            console.error(e);
+            statusDiv.innerHTML = "데이터 로드 오류";
+        }
     }
 
     function selectPeriod(days, btn) {
         selectedDays = days;
         document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('selected'));
         btn.classList.add('selected');
-        
         const pushBtn = document.getElementById('final-push-btn');
-        pushBtn.style.opacity = "1";
-        pushBtn.style.pointerEvents = "auto";
-        pushBtn.innerText = `서버 데이터베이스에 등재 (${days}일)`;
+        pushBtn.style.opacity = "1"; pushBtn.style.pointerEvents = "auto";
+        pushBtn.innerText = `서버 DB 등재 (${days}일)`;
     }
 
     async function pushBlack() {
@@ -317,36 +615,22 @@
         const nick = document.getElementById('reg-nick').value;
         const reason = document.getElementById('reg-reason').value;
         if(!uid || selectedDays === 0) return alert("정보를 모두 입력하세요.");
-        
-        const now = new Date();
-        const expireTime = new Date(now.getTime() + (selectedDays * 24 * 60 * 60 * 1000));
-
+        const expireTime = new Date(new Date().getTime() + (selectedDays * 24 * 60 * 60 * 1000));
         await fetch(DB_URL.replace('.json', `/${uid}.json`), {
-            method: 'PUT',
-            body: JSON.stringify({
-                uid: uid,
-                nick: nick,
-                reason: reason,
-                expireTimestamp: expireTime.toISOString()
-            })
+            method: 'PUT', body: JSON.stringify({ uid, nick, reason, expireTimestamp: expireTime.toISOString() })
         });
-        alert(selectedDays + "일간 등재 완료!");
-        loadData();
-        document.getElementById('reg-uid').value = "";
-        document.getElementById('reg-nick').value = "";
-        document.getElementById('reg-reason').value = "";
-        document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('selected'));
-        selectedDays = 0;
-        document.getElementById('final-push-btn').style.opacity = "0.5";
-        document.getElementById('final-push-btn').style.pointerEvents = "none";
+        alert(selectedDays + "일간 등재 완료!"); location.reload();
     }
+
+    async function releaseBlack(uid) { if(!confirm(`해제하시겠습니까?`)) return; await fetch(DB_URL.replace('.json', `/${uid}.json`), { method: 'DELETE' }); loadData(); }
 
     function switchTab(name) {
         document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
         document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
         document.getElementById('page-' + name).classList.add('active');
         document.getElementById('nav-' + name).classList.add('active');
-        document.getElementById('title').innerText = (name === 'notice') ? '필독하세요' : (name === 'main' ? '렉카 메인 시스템' : '블랙리스트 관리');
+        const titles = { notice: '필독하세요', att: '출퇴근 관리', main: '렉카 메인 시스템', admin: '블랙리스트 관리', report: '거래 보고서 작성', viewlog: '보고서 내역 조회' };
+        document.getElementById('title').innerText = titles[name];
     }
 
     const PRICES = { tire: 10000000, kit: 200000000, contract: 200000000 };
@@ -360,19 +644,9 @@
         document.getElementById('res-net').innerText = (total * 0.6).toLocaleString() + "원";
     }
 
-    function resetCalc() {
-        document.getElementById('tire').value = 0; document.getElementById('kit').value = 0; document.getElementById('contract').value = 0;
-        calculate();
-    }
+    function resetCalc() { document.getElementById('tire').value = 0; document.getElementById('kit').value = 0; document.getElementById('contract').value = 0; calculate(); }
 
-    async function clip(txt, label) {
-        try { await navigator.clipboard.writeText(txt); alert(label + " 복사 완료!"); }
-        catch(e) {
-            const t = document.createElement("textarea"); document.body.appendChild(t);
-            t.value = txt; t.select(); document.execCommand('copy');
-            document.body.removeChild(t); alert(label + " 복사 완료!");
-        }
-    }
+    async function clip(txt, label) { try { await navigator.clipboard.writeText(txt); alert(label + " 복사 완료!"); } catch(e) {} }
 
     function copyW(type) {
         const u = document.getElementById('uid').value || "미입력";
@@ -387,13 +661,59 @@
 
     function copyCalc() {
         const m = `[ 사이버렉카 정산 내역 ]\n🛠 타이어: ${document.getElementById('tire').value}개\n📦 포장키트: ${document.getElementById('kit').value}개\n📜 계약서: ${document.getElementById('contract').value}개\n------------------\n💰 총 판매액: ${document.getElementById('res-user').innerText}\n🏦 공계입금(40%): ${document.getElementById('res-final').innerText}\n💸 순수익(60%): ${document.getElementById('res-net').innerText}\n-『 사이버렉카 』-`;
-        copyCalcToClip(m);
-    }
-    
-    function copyCalcToClip(txt) {
-        clip(txt, "정산 내역");
+        clip(m, "정산 내역");
     }
 
+    let reportItemIdx = 0;
+    const REPORT_ITEMS = ["압류", "압류해지", "폐차", "방탄타이어", "차량포장키트", "차량거래계약서"];
+    function addReportItem() {
+        reportItemIdx++;
+        const area = document.getElementById('report-items-area');
+        const div = document.createElement('div');
+        div.className = 'report-item-box'; div.id = 'rep-item-' + reportItemIdx;
+        div.innerHTML = `<div class="report-grid"><div><span class="report-label">📦 물품명</span><select class="form-input rep-item-name" onchange="updateReportSummary()"><option value="">선택해주세요</option>${REPORT_ITEMS.map(i => `<option value="${i}">${i}</option>`).join('')}</select></div><div><span class="report-label">🔢 개수</span><input type="number" class="form-input rep-item-count" value="1" min="1" oninput="updateReportSummary()"></div></div>`;
+        area.appendChild(div); updateReportSummary();
+    }
+    function removeReportItem() { if(reportItemIdx <= 1) return; document.getElementById('rep-item-' + reportItemIdx).remove(); reportItemIdx--; updateReportSummary(); }
+    function updateReportSummary() {
+        const names = document.querySelectorAll('.rep-item-name'); const counts = document.querySelectorAll('.rep-item-count');
+        let summary = []; names.forEach((el, i) => { if(el.value) summary.push(`${el.value}(${counts[i].value}개)`); });
+        document.getElementById('rep-sum-list').innerText = summary.length > 0 ? summary.join(', ') : "-";
+    }
+
+    async function processReportSubmit() {
+        const myUid = document.getElementById('my-uid').value;
+        const myNick = document.getElementById('my-nick').value;
+        const targetUid = document.getElementById('rep-uid').value;
+        const targetNick = document.getElementById('rep-nick').value;
+        if(!myUid || !myNick || !targetUid || !targetNick) return alert("정보를 모두 입력해주세요.");
+        const itemNodes = document.querySelectorAll('.report-item-box');
+        let currentSubmitData = {};
+        for (let node of itemNodes) {
+            const name = node.querySelector('.rep-item-name').value;
+            const count = parseInt(node.querySelector('.rep-item-count').value) || 0;
+            if(name) currentSubmitData[name] = (currentSubmitData[name] || 0) + count;
+        }
+        if(Object.keys(currentSubmitData).length === 0) return alert("물품을 선택해주세요.");
+        try {
+            const res = await fetch(REPORT_DB_URL);
+            const allLogs = await res.json() || {};
+            const today = new Date().toISOString().split('T')[0];
+            let validItems = {};
+            let exceededInfo = [];
+            for (let name in currentSubmitData) {
+                const limit = ITEM_LIMITS[name] || 999;
+                let prevSold = 0;
+                for (let k in allLogs) { if (allLogs[k].targetUid === targetUid && allLogs[k].date === today) prevSold += (allLogs[k].items[name] || 0); }
+                if (prevSold + currentSubmitData[name] <= limit) validItems[name] = currentSubmitData[name];
+                else exceededInfo.push(`- ${name}: 오늘 ${prevSold}개 판매됨 (한도:${limit})`);
+            }
+            if (Object.keys(validItems).length === 0) return alert("❌ 판매 한도 초과:\n" + exceededInfo.join('\n'));
+            await fetch(REPORT_DB_URL, { method: 'POST', body: JSON.stringify({ date: today, authorUid: myUid, authorNick: myNick, targetUid: targetUid, targetNick: targetNick, items: validItems, timestamp: new Date().getTime() }) });
+            alert(exceededInfo.length > 0 ? "⚠️ 일부 한도 초과 물품 제외 후 등록!" : "✅ 등록 완료!");
+            location.reload();
+        } catch (e) { alert("DB 오류"); }
+    }
     setInterval(() => { document.getElementById('clock').innerText = new Date().toLocaleTimeString('ko-KR', {hour12: false}); }, 1000);
 </script>
 </body>
