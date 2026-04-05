@@ -667,24 +667,62 @@
 
     function resetCalc() { document.getElementById('tire').value = 0; document.getElementById('kit').value = 0; document.getElementById('contract').value = 0; calculate(); }
 
-    async function clip(txt, label) { try { await navigator.clipboard.writeText(txt); alert(label + " 복사 완료!"); } catch(e) {} }
+    // 1. 복사 핵심 함수 (보안 및 호환성 강화)
+    async function clip(txt, label) { 
+        if (!txt || txt.trim() === "" || txt.includes("undefined")) {
+            return alert("복사할 내용이 없거나 올바르지 않습니다.");
+        }
 
+        try { 
+            // 최신 브라우저 방식
+            await navigator.clipboard.writeText(txt); 
+            alert(label + " 복사 완료!"); 
+        } catch(e) { 
+            // 구형 브라우저 및 보안 환경(HTTP) 대응 방식
+            try {
+                const t = document.createElement("textarea");
+                document.body.appendChild(t);
+                t.value = txt;
+                t.select();
+                document.execCommand('copy');
+                document.body.removeChild(t);
+                alert(label + " 복사 완료!");
+            } catch (err) {
+                alert("복사에 실패했습니다. 브라우저 설정을 확인해주세요.");
+            }
+        } 
+    }
+
+    // 2. 압류 공지 복사 함수 (ID 참조 및 공백 보정)
     function copyW(type) {
-        const u = document.getElementById('uid').value || "미입력";
-        const n = document.getElementById('nick').value || "미입력";
+        const u = document.getElementById('uid').value.trim() || "미입력";
+        const n = document.getElementById('nick').value.trim() || "미입력";
         let m = `/사이버렉카 사이버렉카에서 알려드립니다.\n고번 : ${u}  닉네임 : ${n}\n`;
-        if(type==='exec') m += "범죄에 사용된 차량으로 즉시 압류를 진행합니다.";
-        else if(type==='normal') m += "도로에 버려진 차량으로 1분뒤 압류를 진행합니다.";
-        else if(type==='long') m += "장기간 미접속 차량으로 즉시 압류를 진행합니다.";
+        
+        if(type === 'exec') m += "범죄에 사용된 차량으로 즉시 압류를 진행합니다.";
+        else if(type === 'normal') m += "도로에 버려진 차량으로 1분뒤 압류를 진행합니다.";
+        else if(type === 'long') m += "장기간 미접속 차량으로 즉시 압류를 진행합니다.";
         else m += "메인차고지 앞 차량으로 1분뒤 압류를 진행합니다.";
+        
         clip(m, "압류 공지");
     }
 
+    // 3. 정산 내역 복사 함수 (결과값 직접 참조 방식)
     function copyCalc() {
-        const m = `[ 사이버렉카 정산 내역 ]\n🛠 타이어: ${document.getElementById('tire').value}개\n📦 포장키트: ${document.getElementById('kit').value}개\n📜 계약서: ${document.getElementById('contract').value}개\n------------------\n💰 총 판매액: ${document.getElementById('res-user').innerText}\n🏦 공계입금(40%): ${document.getElementById('res-final').innerText}\n💸 순수익(60%): ${document.getElementById('res-net').innerText}\n-『 사이버렉카 』-`;
+        // 입력값 가져오기
+        const tire = document.getElementById('tire').value || "0";
+        const kit = document.getElementById('kit').value || "0";
+        const contract = document.getElementById('contract').value || "0";
+        
+        // 계산 결과 텍스트 가져오기 (innerText 사용)
+        const userTotal = document.getElementById('res-user').innerText || "0원";
+        const finalDeposit = document.getElementById('res-final').innerText || "0원";
+        const netProfit = document.getElementById('res-net').innerText || "0원";
+
+        const m = `[ 사이버렉카 정산 내역 ]\n🛠 타이어: ${tire}개\n📦 포장키트: ${kit}개\n📜 계약서: ${contract}개\n------------------\n💰 총 판매액: ${userTotal}\n🏦 공계입금(40%): ${finalDeposit}\n💸 순수익(60%): ${netProfit}\n-『 사이버렉카 』-`;
+        
         clip(m, "정산 내역");
     }
-
     let reportItemIdx = 0;
     const REPORT_ITEMS = ["압류", "압류해지", "폐차", "방탄타이어", "차량포장키트", "차량거래계약서"];
     function addReportItem() {
