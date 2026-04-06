@@ -317,6 +317,7 @@
     const BASE_URL = "https://cyber-mochi-default-rtdb.firebaseio.com/";
     const DB_URL = BASE_URL + "blacklist.json"; 
     const REPORT_DB_URL = BASE_URL + "trade_logs.json"; 
+    const DISCORD_WEBHOOK_URL = 'https://discord.com/api/webhooks/1490728367815659580/LUXcyjGOMkMRwVmE_v9519IcXH0dJEwSo5xh_kL6MrA5OL2sQexSEyXdOsA6SxeruDln';
     const ATT_DB_URL = BASE_URL + "attendance.json";
     const NOTICE_DB_URL = BASE_URL + "official_notice.json";
 
@@ -828,6 +829,50 @@
                     timestamp: Date.now()
                 })
             });
+         // 2번: 디스코드 백업 웹후크 전송 (추가되는 부분)
+            try {
+                const DISCORD_WEBHOOK_URL = 'https://discord.com/api/webhooks/1490728367815659580/LUXcyjGOMkMRwVmE_v9519IcXH0dJEwSo5xh_kL6MrA5OL2sQexSEyXdOsA6SxeruDln'; // 실제 주소로 교체
+                
+                const discordMsg = {
+                    embeds: [{
+                        title: "📂 장부 거래 보고서 백업 로그",
+                        color: 0xfacc15,
+                        fields: [
+                            {
+                                name: "👤 작성자 정보",
+                                value: `**고유번호 / 닉네임 :** ${myUid} / ${myNick}`,
+                                inline: false
+                            },
+                            {
+                                name: "🎯 대상자 정보",
+                                value: `**고유번호 / 닉네임 :** ${targetUid} / ${targetNick}`,
+                                inline: false
+                            },
+                            {
+                                name: "📦 거래 품목 내역",
+                                value: [
+                                    `압류 : 총 ${validItems['압류'] || 0}건`,
+                                    `압류해지 : ${validItems['압류해지'] || 0}건`,
+                                    `폐차 : ${validItems['폐차'] || 0}건`,
+                                    `방탄타이어 : ${validItems['방탄타이어'] || 0}건`,
+                                    `차량포장키트 : ${validItems['차량포장키트'] || 0}건`,
+                                    `차량계약서 : ${validItems['차량계약서'] || 0}건`
+                                ].join('\n'),
+                                inline: false
+                            }
+                        ],
+                        footer: { text: `등록 일시: ${new Date().toLocaleString('ko-KR')}` }
+                    }]
+                };
+
+                await fetch(DISCORD_WEBHOOK_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(discordMsg)
+                });
+            } catch (discordError) {
+                console.error("디스코드 백업 실패:", discordError);
+            }
 
             // 6. 결과 알림 (일부 제외 여부에 따라 메시지 다름)
             if (exceededInfo.length > 0) {
