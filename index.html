@@ -220,8 +220,8 @@
                     
                     <div class="calc-res">
                         <div><span>유저 판매가 총액:</span> <span id="res-user">0원</span></div>
-                        <div class="total-highlight"><span>공동계좌 입금액 (40%):</span> <span id="res-final">0원</span></div>
-                        <div style="color:var(--success); font-weight:800; margin-top:10px;"><span>판매 순수익 (60%):</span> <span id="res-net">0원</span></div>
+                        <div class="total-highlight"><span>공동계좌 입금액 (20%):</span> <span id="res-final">0원</span></div>
+                        <div style="color:var(--success); font-weight:800; margin-top:10px;"><span>판매 순수익 (80%):</span> <span id="res-net">0원</span></div>
                     </div>
                     
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px;">
@@ -672,9 +672,13 @@
         const k = parseInt(document.getElementById('kit').value) || 0;
         const c = parseInt(document.getElementById('contract').value) || 0;
         const total = (t * PRICES.tire) + (k * PRICES.kit) + (c * PRICES.contract);
+        
+        const sharedRate = 0.2; // 공동계좌 20%로 수정됨
+        const netRate = 0.8;    // 순수익 80%로 수정됨
+
         document.getElementById('res-user').innerText = total.toLocaleString() + "원";
-        document.getElementById('res-final').innerText = (total * 0.4).toLocaleString() + "원";
-        document.getElementById('res-net').innerText = (total * 0.6).toLocaleString() + "원";
+        document.getElementById('res-final').innerText = (total * sharedRate).toLocaleString() + "원";
+        document.getElementById('res-net').innerText = (total * netRate).toLocaleString() + "원";
     }
 
     function resetCalc() { document.getElementById('tire').value = 0; document.getElementById('kit').value = 0; document.getElementById('contract').value = 0; calculate(); }
@@ -731,7 +735,7 @@
         const finalDeposit = document.getElementById('res-final').innerText || "0원";
         const netProfit = document.getElementById('res-net').innerText || "0원";
 
-        const m = `[ 사이버렉카 정산 내역 ]\n🛠 타이어: ${tire}개\n📦 포장키트: ${kit}개\n📜 계약서: ${contract}개\n------------------\n💰 총 판매액: ${userTotal}\n🏦 공계입금(40%): ${finalDeposit}\n💸 순수익(60%): ${netProfit}\n-『 사이버렉카 』-`;
+        const m = `[ 사이버렉카 정산 내역 ]\n🛠 타이어: ${tire}개\n📦 포장키트: ${kit}개\n📜 계약서: ${contract}개\n------------------\n💰 총 판매액: ${userTotal}\n🏦 공계입금(20%): ${finalDeposit}\n💸 순수익(80%): ${netProfit}\n-『 사이버렉카 』-`;
         
         clip(m, "정산 내역");
     }
